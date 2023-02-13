@@ -33,11 +33,11 @@ OPTIONS:
 -m, --mode      Optional    The search mode to be used. By default it will be
                             plain text search.
 
-                            The available modes are -
-                            * c - Complete Match      Entire line should match the given regex
-                            * s - Substring Match,    Print lines that contain the substring matching query
-                            * f - First Substring,    Print only the first substring of a line that matched
-                            * l - Last Substring,     Print only the last sustring of a line that matched
-                            * a - All Substring,      Print all matched substring of a line
-                            * [Default] PlainSearch,  Print lines containing the subsctring - no regex.    
+                The available modes are -
+                * c - Complete Match      Entire line should match the given regex
+                * s - Substring Match,    Print lines that contain the substring matching query
+                * f - First Substring,    Print only the first substring of a line that matched
+                * l - Last Substring,     Print only the last sustring of a line that matched
+                * a - All Substring,      Print all matched substring of a line
+                * [Default] PlainSearch,  Print lines containing the subsctring - no regex.  
 ```

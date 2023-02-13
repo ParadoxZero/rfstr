@@ -23,25 +23,36 @@ fn main() {
     let args: Vec<OsString> = env::args_os().skip(1).collect();
     let arg_context = argust::parse_args(args.iter(), get_argust_config());
 
+    if arg_context.contains(Some('h'), Some("help")).0 {
+        print_help();
+        return;
+    }
+
     let lines = get_lines(&arg_context);
 
     if lines.is_empty() {
         eprintln!("No input recieved.");
+        print_help();
+        return;
     }
 
     let match_mode = get_mode(&arg_context);
-    let mut query = get_query(&arg_context);
-    query = match match_mode {
-        MatchMode::PlainSearch => regex::escape(&query),
-        MatchMode::CompleteMatch => format!("^{}$", query),
-        _ => query,
-    };
-    let query = Regex::new(&query).expect("Unable to build the regex query");
+    if let Some(query) = get_query(&arg_context) {
+        let mut query = query;
+        query = match match_mode {
+            MatchMode::PlainSearch => regex::escape(&query),
+            MatchMode::CompleteMatch => format!("^{}$", query),
+            _ => query,
+        };
+        let query = Regex::new(&query).expect("Unable to build the regex query");
 
-    lines
-        .iter()
-        .filter_map(|l| search(l, &query, match_mode))
-        .for_each(|l| println!("{}", l));
+        lines
+            .iter()
+            .filter_map(|l| search(l, &query, match_mode))
+            .for_each(|l| println!("{}", l));
+    } else {
+        print_help();
+    }
 }
 
 fn get_lines(arg_context: &argust::ArgContext) -> Vec<String> {
@@ -74,11 +85,11 @@ fn get_mode(arg_context: &argust::ArgContext) -> MatchMode {
     return MatchMode::PlainSearch;
 }
 
-fn get_query(arg_context: &argust::ArgContext) -> String {
+fn get_query(arg_context: &argust::ArgContext) -> Option<String> {
     if let Some(query) = arg_context.contains(Some('q'), Some("query")).1 {
-        return query;
+        return Some(query);
     }
-    return "".to_string();
+    return None;
 }
 
 fn search(line: &str, query: &Regex, mode: MatchMode) -> Option<String> {
@@ -131,4 +142,37 @@ fn get_lines_from_file(file_name: &str) -> Vec<String> {
         .split("\n")
         .map(|s| s.to_string())
         .collect::<Vec<String>>()
+}
+
+fn print_help() {
+    println!(
+        r#"
+Command line utility to search and filter strings
+
+Usage:
+    rfstr -q <query> [-p <file path>] [-m <mode>]
+
+EXAMPLE:
+$ echo "Hello World" | rfstr -q "[[:alpha:]]+" -m f
+$ Hello
+
+OPTIONS:
+
+-q, --query     Required    The query that needs to be searched. It can be any 
+                            valid rust expression without any named captures.
+
+-p, --path      Optional    The path to file which needs to be searched.
+
+-m, --mode      Optional    The search mode to be used. By default it will be
+                            plain text search.
+
+                            The available modes are -
+                            * c - Complete Match      Entire line should match the given regex
+                            * s - Substring Match,    Print lines that contain the substring matching query
+                            * f - First Substring,    Print only the first substring of a line that matched
+                            * l - Last Substring,     Print only the last sustring of a line that matched
+                            * a - All Substring,      Print all matched substring of a line
+                            * [Default] PlainSearch,  Print lines containing the subsctring - no regex.    
+"#
+    );
 }

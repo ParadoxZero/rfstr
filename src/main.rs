@@ -89,6 +89,22 @@ fn search(line: &str, query: &Regex, mode: MatchMode) -> Option<String> {
             .map(|c| c.get(0).unwrap().as_str().to_string())
             .collect::<Vec<String>>()
             .pop(),
+        MatchMode::LastSubstring => query
+            .captures_iter(line)
+            .last()
+            .map(|c| c.get(0).unwrap().as_str().to_string()),
+        MatchMode::AllSubstring => {
+            let mut match_list = String::new();
+            for c in query.captures_iter(line) {
+                match_list = match_list + &format!("\n{}", c.get(0).unwrap().as_str()).to_string();
+            }
+
+            if !match_list.ends_with("\n") {
+                match_list = match_list + "\n"
+            }
+
+            Some(match_list)
+        }
         _ => {
             if query.is_match(&line) {
                 return Some(line.to_string());

@@ -1,4 +1,5 @@
 use atty::Stream;
+use regex::Regex;
 use std::{
     env,
     ffi::OsString,
@@ -8,12 +9,14 @@ use std::{
 
 use argust::ParserConfig;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum MatchMode {
     CompleteMatch,  // c
     SubstringMatch, // s
     FirstSubstring, // f
     LastSubstring,  // l
     AllSubstring,   // a
+    PlainSearch,    // Default
 }
 
 fn main() {
@@ -27,11 +30,17 @@ fn main() {
     }
 
     let match_mode = get_mode(&arg_context);
-    let query = get_query(&arg_context);
+    let mut query = get_query(&arg_context);
+    query = match match_mode {
+        MatchMode::PlainSearch => regex::escape(&query),
+        MatchMode::CompleteMatch => format!("^{}$", query),
+        _ => query,
+    };
+    let query = Regex::new(&query).expect("Unable to build the regex query");
 
     lines
         .iter()
-        .filter_map(|l| if l.contains(&query) { Some(l) } else { None })
+        .filter_map(|l| search(l, &query, match_mode))
         .for_each(|l| println!("{}", l));
 }
 
@@ -59,10 +68,10 @@ fn get_mode(arg_context: &argust::ArgContext) -> MatchMode {
             "f" => return MatchMode::FirstSubstring,
             "l" => return MatchMode::LastSubstring,
             "a" => return MatchMode::AllSubstring,
-            _ => return MatchMode::CompleteMatch,
+            _ => return MatchMode::PlainSearch,
         };
     }
-    return MatchMode::CompleteMatch;
+    return MatchMode::PlainSearch;
 }
 
 fn get_query(arg_context: &argust::ArgContext) -> String {
@@ -70,6 +79,24 @@ fn get_query(arg_context: &argust::ArgContext) -> String {
         return query;
     }
     return "".to_string();
+}
+
+fn search(line: &str, query: &Regex, mode: MatchMode) -> Option<String> {
+    match mode {
+        MatchMode::FirstSubstring => query
+            .captures_iter(line)
+            .take(1)
+            .map(|c| c.get(0).unwrap().as_str().to_string())
+            .collect::<Vec<String>>()
+            .pop(),
+        _ => {
+            if query.is_match(&line) {
+                return Some(line.to_string());
+            } else {
+                return None;
+            }
+        }
+    }
 }
 
 fn get_argust_config() -> Option<ParserConfig> {

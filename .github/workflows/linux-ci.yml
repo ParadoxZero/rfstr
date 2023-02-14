@@ -21,3 +21,7 @@ jobs:
       run: cargo build --verbose --release
     - name: Run tests
       run: cargo test --verbose
+    - uses: actions/upload-artifact@v3
+      with:
+        name: binary
+        path: target/release/rfstr*
